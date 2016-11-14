@@ -16,10 +16,12 @@ public class frequencyBuffer {
     private short[]buffer;
     private int intervals;
 
-    /*
+
+
+    /**
      * Constructor used for unspecified volume amount
-     * @param frequency Frequency this buffer will output
-     * @param interval signal quality of the wave. More intervals is higher quality. Imagine a rahemian sum
+     * @param frequency
+     * @param intervals
      */
     public frequencyBuffer(double frequency, int intervals){
         this.frequency = frequency;
@@ -35,10 +37,10 @@ public class frequencyBuffer {
         writeTheBuffer();
     }
 
-    /*
+    /**
      * Constructor used for specifiying a volume
      * @param frequency Frequency this buffer will output
-     * @param interval signal quality of the wave. More intervals is higher quality. Imagine a rahemian sum
+     * @param intervals signal quality of the wave. More intervals is higher quality. Imagine a rahemian sum
      * @param leftVolume volume amount for the left speaker
      * @param rightVolume volume amount for the right speaker
      */
@@ -56,7 +58,7 @@ public class frequencyBuffer {
         writeTheBuffer();
     }
 
-    /*
+    /**
      * Instantiate all of the sound values.
      */
     private void instantiateValues() {
@@ -70,21 +72,21 @@ public class frequencyBuffer {
         audioTrack.write(buffer, 0, sound.length);
     }
 
-    /*
+    /**
      * Play the selected track
      */
     public void play(){
         audioTrack.play();
     }
 
-    /*
+    /**
      * Because we are statically playing and not streaming, I only want to write the buffer once
      */
     private void writeTheBuffer(){
         audioTrack.write(buffer, 0, sound.length);
     }
 
-    /*
+    /**
      * Stop playing the selected track
      */
     public void stop(){
@@ -98,7 +100,7 @@ public class frequencyBuffer {
         }
     }
 
-    /*
+    /**
      * The volume is going to be set to a predefined value
      * @param leftVolume volume amount for the left speaker
      * @param rightVolume volume amount for the right speaker
@@ -107,14 +109,14 @@ public class frequencyBuffer {
         audioTrack.setStereoVolume(leftVolume, rightVolume);
     }
 
-    /*
+    /**
      * Method that simply sets the volume to the max
      */
     private void setVolume(){
         audioTrack.setStereoVolume(AudioTrack.getMaxVolume(), AudioTrack.getMaxVolume());
     }
 
-    /*
+    /**
      * Frees the resources related to the audio track.
      * Also idk how to delete the object in java. Usually its pretty good tho
      */
