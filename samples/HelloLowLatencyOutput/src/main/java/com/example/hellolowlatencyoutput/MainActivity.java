@@ -18,11 +18,14 @@
 package com.example.hellolowlatencyoutput;
 
 import android.app.Activity;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
+
+import android.os.SystemClock;
 
 import android.app.Activity;
 import android.media.MediaPlayer;
@@ -39,223 +42,276 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 
 import com.example.android.howie.HowieEngine;
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.appindexing.Thing;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 public class MainActivity extends Activity
-        implements OnTouchListener{
+        implements OnTouchListener {
 
-  private TextView text;
+    private TextView text;
 
-  private long streamId;
+    private AudioTrack mAudioTrack;
 
-  public static native long initPlayback();
+    private float[] mSound = new float[44100];
 
-  public static native void playTone(long stream);
+    private short[] mBuffer = new short[44100];
 
-  public static native void stopTone(long stream);
+    private long streamId;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
-  public static native void startStream(long stream);
+    public static native long initPlayback();
 
-  public static native void stopStream(long stream);
+    public static native void playTone(long stream);
 
-  public static native void destroyPlayback(long stream);
+    public static native void stopTone(long stream);
 
-  public static final String TAG = MainActivity.class.getName();
+    public static native void startStream(long stream);
 
-  private TextView textLog;
+    public static native void stopStream(long stream);
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    System.loadLibrary("hello_low_latency_output");
+    public static native void destroyPlayback(long stream);
 
-    super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_main);
+    public static final String TAG = MainActivity.class.getName();
 
-    HowieEngine.init(this);
-    streamId = initPlayback();
+    private TextView textLog;
 
-    View layoutMain = findViewById(R.id.layoutMain);
-//    layoutMain.setOnTouchListener(new View.OnTouchListener() {
-//
-//      @Override
-//      public boolean onTouch(View v, MotionEvent event) {
-//        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//          Log.d(TAG, "Playing sound");
-//          playTone(streamId);
-//        } else if (event.getAction() == MotionEvent.ACTION_UP) {
-//          Log.d(TAG, "Stopping playback");
-//          stopTone(streamId);
-//        }
-//
-//        return true;
-//      }
-//    });
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        System.loadLibrary("hello_low_latency_output");
 
-      // Set on touch listener
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-      View v = findViewById(R.id.button1);
-      if (v != null)
-          v.setOnTouchListener(this);
+        HowieEngine.init(this);
+        streamId = initPlayback();
 
-      v = findViewById(R.id.button2);
-      if (v != null)
-          v.setOnTouchListener(this);
+        View layoutMain = findViewById(R.id.layoutMain);
 
-      v = findViewById(R.id.button3);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      v = findViewById(R.id.button4);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      v = findViewById(R.id.button5);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      v = findViewById(R.id.button6);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      v = findViewById(R.id.button7);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      v = findViewById(R.id.button8);
-      if (v != null)
-          v.setOnTouchListener(this);
-
-      text = (TextView) findViewById(R.id.textView2);
-  }
-
-  @Override
-  protected void onPause() {
-    super.onPause();
-    stopStream(streamId);
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    startStream(streamId);
-  }
-
-  private void log(String message) {
-
-    Log.d(TAG, message);
-    textLog.setText(textLog.getText() + "\n" + message);
-  }
-
-    private void playSound(double frequency, int duration) {
         // AudioTrack definition
         int mBufferSize = AudioTrack.getMinBufferSize(44100,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_8BIT);
 
-        AudioTrack mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100,
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                mBufferSize, AudioTrack.MODE_STREAM);
+                mBufferSize * 64, AudioTrack.MODE_STATIC);
+
+        mAudioTrack.setStereoVolume(AudioTrack.getMaxVolume(), AudioTrack.getMaxVolume());
 
         // Sine wave
-        double[] mSound = new double[44100];
-        short[] mBuffer = new short[duration];
+
         for (int i = 0; i < mSound.length; i++) {
-            mSound[i] = Math.sin((2.0*Math.PI * i/(44100/frequency)));
-            mBuffer[i] = (short) (mSound[i]*Short.MAX_VALUE);
+            mSound[i] = (float) (Math.sin((2.0 * Math.PI * i / (44100 / 440))));
+            mBuffer[i] = (short) (mSound[i] * Short.MAX_VALUE);
         }
 
+        mAudioTrack.write(mBuffer, 0, mSound.length);
+
+        // Set on touch listener
+
+        View v = findViewById(R.id.button1);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button2);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button3);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button4);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button5);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button6);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button7);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        v = findViewById(R.id.button8);
+        if (v != null)
+            v.setOnTouchListener(this);
+
+        text = (TextView) findViewById(R.id.textView2);
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopStream(streamId);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startStream(streamId);
+    }
+
+    private void log(String message) {
+
+        Log.d(TAG, message);
+        textLog.setText(textLog.getText() + "\n" + message);
+    }
+
+    private void playSound(AudioTrack mAudioTrack, short[] mBuffer, float[] mSound) {
+        // AudioTrack definition
+
         //mAudioTrack.setVolume(AudioTrack.getMaxVolume());
-        mAudioTrack.setStereoVolume(AudioTrack.getMaxVolume(), AudioTrack.getMaxVolume());
+
         mAudioTrack.play();
 
-        mAudioTrack.write(mBuffer, 0, mSound.length);
-        mAudioTrack.stop();
-        mAudioTrack.release();
+        while(MotionEvent.ACTION_DOWN == 0)
+        {
+            if (mAudioTrack.getPlaybackHeadPosition() >= 44100)
+            {
+                mAudioTrack.reloadStaticData();
+                mAudioTrack.stop();
+                mAudioTrack.play();
+            }
+        }
+
+        //mAudioTrack.stop();
+        //mAudioTrack.release();
 
     }
 
 
-  // On touch
+    // On touch
 
-  @Override
+    @Override
     /*
      * This method is used for detecting touches which means it differentiates between presses and releases
      */
-  public boolean onTouch(View v, MotionEvent event) {
-    int action = event.getAction();
-    int id = v.getId();
+    public boolean onTouch(View v, MotionEvent event) {
+        int action = event.getAction();
+        int id = v.getId();
 
-    switch (action) {
-      // Button is held down, start playing the music
+        switch (action) {
+            // Button is held down, start playing the music
 
-      case MotionEvent.ACTION_DOWN:
-        switch (id) {
-          case R.id.button1:
-              playTone(streamId);
-              break;
-          case R.id.button2:
-              playTone(streamId);
-              break;
-          case R.id.button3:
-              playTone(streamId);
-              break;
-          case R.id.button4:
-              playTone(streamId);
-              break;
-          case R.id.button5:
-              playTone(streamId);
-              break;
-          case R.id.button6:
-              playTone(streamId);
-              break;
-          case R.id.button7:
-              playTone(streamId);
-              break;
-          case R.id.button8:
-              playSound(440, 44100);
-              break;
-          default:
-              return false;
+            case MotionEvent.ACTION_DOWN:
+                switch (id) {
+                    case R.id.button1:
+                        playTone(streamId);
+                        break;
+                    case R.id.button2:
+                        playTone(streamId);
+                        break;
+                    case R.id.button3:
+                        playTone(streamId);
+                        break;
+                    case R.id.button4:
+                        playTone(streamId);
+                        break;
+                    case R.id.button5:
+                        playTone(streamId);
+                        break;
+                    case R.id.button6:
+                        playTone(streamId);
+                        break;
+                    case R.id.button7:
+                        playTone(streamId);
+                        break;
+                    case R.id.button8:
+                        playSound(mAudioTrack, mBuffer, mSound);
+                        break;
+                    default:
+                        return false;
+                }
+                break;
+
+            // Button has been released. Stop playing the music
+
+            case MotionEvent.ACTION_UP:
+                switch (id) {
+                    case R.id.button1: //1 button
+                        stopTone(streamId);
+                        break;
+                    case R.id.button2: //2 button
+                        stopTone(streamId);
+                        break;
+                    case R.id.button3:
+                        stopTone(streamId);
+                        break;
+                    case R.id.button4:
+                        stopTone(streamId);
+                        break;
+                    case R.id.button5:
+                        stopTone(streamId);
+                        break;
+                    case R.id.button6:
+                        stopTone(streamId);
+                        break;
+                    case R.id.button7:
+                        stopTone(streamId);
+                        break;
+                    case R.id.button8:
+                        //stopTone(streamId);
+                        mAudioTrack.stop();
+                        break;
+                    default:
+                        return false;
+                }
+                break;
+
+            default:
+                return false;
         }
-        break;
 
-      // Button has been released. Stop playing the music
-
-      case MotionEvent.ACTION_UP:
-        switch (id) {
-          case R.id.button1: //1 button
-              stopTone(streamId);
-              break;
-          case R.id.button2: //2 button
-              stopTone(streamId);
-              break;
-          case R.id.button3:
-              stopTone(streamId);
-              break;
-          case R.id.button4:
-              stopTone(streamId);
-              break;
-          case R.id.button5:
-              stopTone(streamId);
-              break;
-          case R.id.button6:
-              stopTone(streamId);
-              break;
-          case R.id.button7:
-              stopTone(streamId);
-              break;
-          case R.id.button8:
-              //stopTone(streamId);
-              break;
-          default:
-            return false;
-        }
-        break;
-
-      default:
         return false;
     }
 
-    return false;
-  }
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    public Action getIndexApiAction() {
+        Thing object = new Thing.Builder()
+                .setName("Main Page") // TODO: Define a title for the content shown.
+                // TODO: Make sure this auto-generated URL is correct.
+                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
+                .build();
+        return new Action.Builder(Action.TYPE_VIEW)
+                .setObject(object)
+                .setActionStatus(Action.STATUS_TYPE_COMPLETED)
+                .build();
+    }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        AppIndex.AppIndexApi.start(client, getIndexApiAction());
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        AppIndex.AppIndexApi.end(client, getIndexApiAction());
+        client.disconnect();
+    }
 }
