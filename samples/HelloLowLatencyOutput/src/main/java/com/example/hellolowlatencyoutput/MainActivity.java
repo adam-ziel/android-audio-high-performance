@@ -54,9 +54,13 @@ public class MainActivity extends Activity
 
     private AudioTrack mAudioTrack;
 
-    private float[] mSound = new float[44100];
+    private int sampleRateInHz = 44100; // Minimum sample rate. Was at 44100
 
-    private short[] mBuffer = new short[44100];
+    private int noteFreq = 440;
+
+    private float[] mSound = new float[sampleRateInHz];
+
+    private short[] mBuffer = new short[sampleRateInHz];
 
     private long streamId;
     /**
@@ -94,24 +98,27 @@ public class MainActivity extends Activity
         View layoutMain = findViewById(R.id.layoutMain);
 
         // AudioTrack definition
-        int mBufferSize = AudioTrack.getMinBufferSize(44100,
+        int mBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz,
                 AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_8BIT);
+                AudioFormat.ENCODING_PCM_8BIT); // Evaluates to 3544 for 44.1kHz
 
-        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100,
+        Log.d("Tag", "mBufferSize = " + mBufferSize);
+
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRateInHz,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                mBufferSize * 64, AudioTrack.MODE_STATIC);
+                mBufferSize * 25, AudioTrack.MODE_STATIC); // Audio fails when below 25??
 
         mAudioTrack.setStereoVolume(AudioTrack.getMaxVolume(), AudioTrack.getMaxVolume());
 
         // Sine wave
 
-        for (int i = 0; i < mSound.length; i++) {
-            mSound[i] = (float) (Math.sin((2.0 * Math.PI * i / (44100 / 440))));
+        for (int i = 0; i < mSound.length; i++)
+        {
+            mSound[i] = (float) (Math.sin((2.0 * Math.PI * i / (sampleRateInHz / noteFreq))));
             mBuffer[i] = (short) (mSound[i] * Short.MAX_VALUE);
         }
 
-        mAudioTrack.write(mBuffer, 0, mSound.length);
+        mAudioTrack.write(mBuffer, 0, mBuffer.length);
 
         // Set on touch listener
 
@@ -171,14 +178,12 @@ public class MainActivity extends Activity
         textLog.setText(textLog.getText() + "\n" + message);
     }
 
-    private void playSound(AudioTrack mAudioTrack, short[] mBuffer, float[] mSound) {
-        // AudioTrack definition
-
-        //mAudioTrack.setVolume(AudioTrack.getMaxVolume());
+    private void playSound(AudioTrack mAudioTrack, short[] mBuffer, float[] mSound)
+    {
 
         mAudioTrack.play();
 
-        while(MotionEvent.ACTION_DOWN == 0)
+        while(MotionEvent.ACTION_DOWN == 0) // 0 is ACTION_DOWN's constant value
         {
             if (mAudioTrack.getPlaybackHeadPosition() >= 44100)
             {
@@ -188,8 +193,8 @@ public class MainActivity extends Activity
             }
         }
 
-        //mAudioTrack.stop();
-        //mAudioTrack.release();
+       // mAudioTrack.play();
+
 
     }
 
@@ -231,7 +236,22 @@ public class MainActivity extends Activity
                         playTone(streamId);
                         break;
                     case R.id.button8:
-                        playSound(mAudioTrack, mBuffer, mSound);
+                        //playSound(mAudioTrack, mBuffer, mSound);
+
+                        mAudioTrack.play();
+
+                        while(event.getAction() == MotionEvent.ACTION_DOWN) // 0 is ACTION_DOWN's constant value
+                        {
+                            if (mAudioTrack.getPlaybackHeadPosition() >= sampleRateInHz)
+                            {
+                                mAudioTrack.reloadStaticData();
+                                mAudioTrack.stop();
+                                mAudioTrack.play();
+                            }
+                        }
+
+
+
                         break;
                     default:
                         return false;
